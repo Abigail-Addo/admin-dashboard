@@ -3,10 +3,13 @@
 import * as React from 'react';
 
 
-export default function Home() {
+const Home = () => {
+
   return (
     <>
-      <h1 className="text-red-500 border border-cyan-400 font-extrabold text-2xl">Welcome</h1>
+      <h1 className="text-red-500 border border-cyan-400 font-extrabold text-2xl">Welcome to the homepage</h1>
     </>
   );
 }
+
+export default Home;
