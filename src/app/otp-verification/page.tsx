@@ -4,28 +4,60 @@ import * as React from 'react';
 import Image from 'next/image';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import { TextField } from '@mui/material';
-import Link from 'next/link';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { otpVerification, resendOtp } from '@/lib/features/adminAuth/adminAuthSlice';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
+
 
 interface IFormInput {
     id: string | number;
-    code: string;
+    token: string;
 }
 const OTPVerification = () => {
-    const { control, handleSubmit, formState: { errors } } = useForm<IFormInput>({
+    const { loading } = useAppSelector((state) => state.adminAuth)
+    const { control, handleSubmit, formState: { errors }, reset } = useForm<IFormInput>({
         defaultValues: {
-            code: '',
+            token: '',
         }
     })
+    const dispatch = useAppDispatch();
+    const router = useRouter();
 
     // function to verify an admin
-    const onSubmit: SubmitHandler<IFormInput> = async () => {
+    const onSubmit: SubmitHandler<IFormInput> = async (data) => {
         try {
-            console.log("clicked")
+            const result = await dispatch(otpVerification(data));
 
+            if (otpVerification.fulfilled.match(result)) {
+                toast.success("OTP verification successful")
+                reset();
+                router.push("/")
+            } else if (otpVerification.rejected.match(result)) {
+                toast.error(result.payload as string)
+                router.push("/")
+            }
         } catch (error) {
-            console.log(error)
+            toast.error(error as string)
+            router.push("/")
         }
     };
+
+    // function to resend otp
+    const handleResendOtp = async () => {
+        try {
+            const result = await dispatch(resendOtp());
+
+            if (resendOtp.fulfilled.match(result)) {
+                toast.success("OTP resent");
+            } else if (resendOtp.rejected.match(result)) {
+                toast.error(result.payload as string);
+            }
+        } catch (error) {
+            toast.error(error as string);
+        }
+    };
+
 
     return (
         <>
@@ -35,16 +67,16 @@ const OTPVerification = () => {
                     <Image
                         src="/assets/hero.png"
                         alt="hero"
-                        layout="fill"
-                        objectFit="cover"
-                        className="w-full h-full"
+                        fill
+                        className="object-cover w-full h-full"
+                        priority
                     />
                     <div className="absolute inset-0 bg-[#D9D9D9] opacity-30" />
                 </div>
 
                 {/* form */}
                 <div className="flex justify-center items-center h-full w-full px-4 overflow-y-scroll">
-                    <div className='h-fit bg-white rounded-lg lg:shadow-lg overflow-y-scroll px-6 py-8 md:px-8 md:py-10'>
+                    <div className='h-fit lg:w-2/5 md:w-3/4 bg-white rounded-lg lg:shadow-lg overflow-y-scroll px-6 py-8 md:px-8 md:py-10'>
                         <form
                             onSubmit={handleSubmit(onSubmit)}
                             className=" w-full space-y-6"
@@ -58,23 +90,26 @@ const OTPVerification = () => {
                                     alt="Logo Small"
                                     width={100}
                                     height={40}
-                                    className="block md:hidden"
+                                    className="block md:hidden w-auto h-auto"
+                                    priority
                                 />
                                 {/* Medium screen logo */}
                                 <Image
                                     src="/logo/logo-tablet.png"
                                     alt="Logo Medium"
-                                    width={120}
-                                    height={50}
-                                    className="hidden md:block lg:hidden"
+                                    width={100}
+                                    height={30}
+                                    className="hidden md:block lg:hidden w-auto h-auto"
+                                    priority
                                 />
                                 {/* Large screen logo */}
                                 <Image
                                     src="/logo/logo-tablet.png"
                                     alt="Logo Large"
-                                    width={140}
-                                    height={60}
-                                    className="hidden lg:block"
+                                    width={100}
+                                    height={40}
+                                    className="hidden lg:block w-auto h-auto"
+                                    priority
                                 />
                             </div>
 
@@ -82,17 +117,17 @@ const OTPVerification = () => {
                             <div className="text-center">
                                 <h2 className="text-xl font-bold text-gray-800 md:text-2xl">OTP Verification</h2>
                                 <p className="text-sm text-gray-600 mt-1">
-                                    Enter the verification code we sent to admin@1234.com
+                                    Enter the verification code we sent to your email
                                 </p>
                             </div>
 
                             {/* code */}
                             <div>
                                 <Controller
-                                    name="code"
+                                    name="token"
                                     control={control}
                                     rules={{
-                                        required: "Please enter code",
+                                        required: "Please enter otp code",
                                         pattern: {
                                             value: /\d+/,
                                             message: "Only digits are allowed in this field"
@@ -124,23 +159,28 @@ const OTPVerification = () => {
                                         />
                                     }
                                 />
-                                {errors.code && (
-                                    <p role="alert" className="text-red-500 text-sm">{errors.code.message}</p>
+                                {errors.token && (
+                                    <p role="alert" className="text-red-500 text-sm">{errors.token.message}</p>
                                 )}
                             </div>
 
                             {/* button */}
                             <div className="w-full flex justify-center">
                                 <button
-                                    type='submit'
-                                    className="bg-[#01589A] text-white px-5 py-2 rounded hover:bg-[#014273] focus:bg-[#01589a] w-full"
+                                    type="submit"
+                                    className={`bg-[#01589A] text-white px-5 py-2 rounded w-full transition duration-300 hover:bg-[#014273] focus:bg-[#01589a] cursor-pointer ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    disabled={loading}
                                 >
-                                    Verify
+                                    {loading ? 'Loading...' : 'Verify'}
                                 </button>
                             </div>
-
                             <p className='text-center'>Didn&apos;t receive an otp?
-                                <Link href="/otp-verification" className='text-[#01589A]'>Resend OTP</Link>
+                                <span
+                                    onClick={handleResendOtp}
+                                    className='text-[#01589A] cursor-pointer hover:underline'
+                                >
+                                    Resend OTP
+                                </span>
                             </p>
                         </form>
                     </div>

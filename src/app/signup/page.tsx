@@ -6,6 +6,10 @@ import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import { FormControl, IconButton, InputAdornment, InputLabel, OutlinedInput, TextField } from '@mui/material';
 import { FaRegEye, FaRegEyeSlash } from 'react-icons/fa';
 import Link from 'next/link';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { signUp } from '@/lib/features/adminAuth/adminAuthSlice';
+import { toast } from 'react-toastify';
+import { useRouter } from 'next/navigation';
 
 interface IFormInput {
     id: string | number;
@@ -17,7 +21,8 @@ interface IFormInput {
     contact: string;
 }
 const Signup = () => {
-    const { control, handleSubmit, formState: { errors } } = useForm<IFormInput>({
+    const { loading } = useAppSelector((state) => state.adminAuth)
+    const { control, handleSubmit, formState: { errors }, reset, watch } = useForm<IFormInput>({
         defaultValues: {
             firstName: '',
             lastName: '',
@@ -27,17 +32,26 @@ const Signup = () => {
             contact: '',
         }
     })
+    const dispatch = useAppDispatch();
+    const router = useRouter();
+    const password = watch('password')
 
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
     // function to sign up an admin
-    const onSubmit: SubmitHandler<IFormInput> = async () => {
+    const onSubmit: SubmitHandler<IFormInput> = async (data) => {
         try {
-            console.log("clicked")
-
+            const result = await dispatch(signUp(data));
+            if (signUp.fulfilled.match(result)) {
+                toast.success("Login successful");
+                reset();
+                router.push("/otp-verification")
+            } else if (signUp.rejected.match(result)) {
+                toast.error(result.payload as string)
+            }
         } catch (error) {
-            console.log(error)
+            toast.error(error as string)
         }
     };
 
@@ -49,16 +63,16 @@ const Signup = () => {
                     <Image
                         src="/assets/hero.png"
                         alt="hero"
-                        layout="fill"
-                        objectFit="cover"
-                        className="w-full h-full"
+                        fill
+                        className="object-cover w-full h-full"
+                        priority
                     />
                     <div className="absolute inset-0 bg-[#D9D9D9] opacity-30" />
                 </div>
 
                 {/* form */}
                 <div className="flex justify-center items-center h-full w-full px-4 overflow-y-scroll">
-                    <div className='h-fit bg-white rounded-lg lg:shadow-lg overflow-y-scroll px-6 py-8 md:px-8 md:py-10'>
+                    <div className='h-fit lg:max-h-[696.1px] lg:w-2/5 md:w-3/4 w-full bg-white rounded-lg lg:shadow-lg overflow-y-scroll px-6 py-8 md:px-8 md:py-10'>
                         <form
                             onSubmit={handleSubmit(onSubmit)}
                             className=" w-full space-y-6"
@@ -72,23 +86,26 @@ const Signup = () => {
                                     alt="Logo Small"
                                     width={100}
                                     height={40}
-                                    className="block md:hidden"
+                                    className="block md:hidden w-auto h-auto"
+                                    priority
                                 />
                                 {/* Medium screen logo */}
                                 <Image
                                     src="/logo/logo-tablet.png"
                                     alt="Logo Medium"
-                                    width={120}
-                                    height={50}
-                                    className="hidden md:block lg:hidden"
+                                    width={100}
+                                    height={30}
+                                    className="hidden md:block lg:hidden w-auto h-auto"
+                                    priority
                                 />
                                 {/* Large screen logo */}
                                 <Image
                                     src="/logo/logo-tablet.png"
                                     alt="Logo Large"
-                                    width={140}
-                                    height={60}
-                                    className="hidden lg:block"
+                                    width={100}
+                                    height={40}
+                                    className="hidden lg:block w-auto h-auto"
+                                    priority
                                 />
                             </div>
 
@@ -111,7 +128,7 @@ const Signup = () => {
                                     render={({ field }) =>
                                         <TextField
                                             {...field}
-                                            id="outlined-basic"
+                                            id="first-name"
                                             label="First Name"
                                             variant="outlined"
                                             className="w-full"
@@ -150,7 +167,7 @@ const Signup = () => {
                                     render={({ field }) =>
                                         <TextField
                                             {...field}
-                                            id="outlined-basic"
+                                            id="last-name"
                                             label="Last Name"
                                             variant="outlined"
                                             className="w-full"
@@ -193,7 +210,7 @@ const Signup = () => {
                                     render={({ field }) =>
                                         <TextField
                                             {...field}
-                                            id="outlined-basic"
+                                            id="email"
                                             label="Email"
                                             variant="outlined"
                                             className="w-full"
@@ -226,7 +243,14 @@ const Signup = () => {
                                 <Controller
                                     name="password"
                                     control={control}
-                                    rules={{ required: "Password is required" }}
+                                    rules={{
+                                        required: "Password is required",
+                                        pattern: {
+                                            value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/,
+                                            message:
+                                                "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character",
+                                        },
+                                    }}
                                     render={({ field }) => (
                                         <FormControl fullWidth variant="outlined" size='small'
                                             sx={{
@@ -259,7 +283,9 @@ const Signup = () => {
                                         </FormControl>
                                     )}
                                 />
-                                {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
+                                {errors.password && (
+                                    <p className="text-red-500 text-sm">{errors.password.message}</p>
+                                )}
                             </div>
 
                             {/* Confirm Password Field */}
@@ -269,7 +295,7 @@ const Signup = () => {
                                     control={control}
                                     rules={{
                                         required: "Confirm your password",
-                                        // validate: value => value === password || "Passwords do not match"
+                                        validate: value => value === password || "Passwords do not match"
                                     }}
                                     render={({ field }) => (
                                         <FormControl fullWidth variant="outlined" size='small'
@@ -303,6 +329,9 @@ const Signup = () => {
                                         </FormControl>
                                     )}
                                 />
+                                {errors.confirmPassword && (
+                                    <p role="alert" className="text-red-500 text-sm">{errors.confirmPassword.message}</p>
+                                )}
                             </div>
 
                             {/* contact */}
@@ -313,14 +342,14 @@ const Signup = () => {
                                     rules={{
                                         required: "Please enter a valid number",
                                         pattern: {
-                                            value: /\d+/,
-                                            message: "Only digits are allowed in this field"
-                                        },
+                                            value: /^\+[1-9]\d{7,14}$/,
+                                            message: "Enter a valid phone number in international format (e.g. +233xxxxxxxxx)",
+                                        }
                                     }}
                                     render={({ field }) =>
                                         <TextField
                                             {...field}
-                                            id="outlined-basic"
+                                            id="contact"
                                             label="Contact"
                                             variant="outlined"
                                             className="w-full"
@@ -351,10 +380,11 @@ const Signup = () => {
                             {/* button */}
                             <div className="w-full flex justify-center">
                                 <button
-                                    type='submit'
-                                    className="bg-[#01589A] text-white px-5 py-2 rounded hover:bg-[#014273] focus:bg-[#01589a] w-full"
+                                    type="submit"
+                                    className={`bg-[#01589A] text-white px-5 py-2 rounded w-full transition duration-300 hover:bg-[#014273] focus:bg-[#01589a] cursor-pointer ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    disabled={loading}
                                 >
-                                    Sign up
+                                    {loading ? 'Loading...' : 'Sign up'}
                                 </button>
                             </div>
 

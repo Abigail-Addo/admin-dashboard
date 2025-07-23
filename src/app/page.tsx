@@ -1,10 +1,13 @@
 import React from 'react'
-
+import DefaultLayout from './DefaultLayout'
 
 const Dashboard = () => {
   return (
     <>
-      <h1>Home page</h1>
+      <DefaultLayout>
+
+        <h1>Home page</h1>
+      </DefaultLayout>
     </>
   )
 }
